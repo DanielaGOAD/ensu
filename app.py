@@ -7,14 +7,6 @@ Original file is located at
     https://colab.research.google.com/drive/1VKPog_e5YS_vBJmBfvfrYRbwIxOS2Ldi
 """
 
-pip install streamlit
-
-pip install gdown
-
-pip install pandas
-
-pip install requests
-
 import streamlit as st
 import pandas as pd
 import tempfile
@@ -437,4 +429,3 @@ if st.button("🔍 Cargar y mostrar resultados"):
             st.warning("No hay datos válidos...")
 
     # python -m streamlit run C:\Users\Usuario\Downloads\ensu_app\app.py
-
