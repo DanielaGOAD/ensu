@@ -251,6 +251,9 @@ for col in columnas_necesarias:
     if col not in ["ANIO", "TRIMESTRE", "CD", "NOM_CD", "FAC_SEL"]:
         dtype_dict[col] = "Int8"
 
+
+
+
 # --- FUNCIÓN ROBUSTA PARA DESCARGAR DE GOOGLE DRIVE ---
 def descargar_csv_drive(file_id, ruta_salida):
     """
@@ -386,17 +389,60 @@ def obtener_lista_ciudades():
     df_temp["NOMBRE_CIUDAD"] = df_temp["CD"].map(mapeo_ciudades).fillna("Desconocido")
     return sorted(df_temp[df_temp["NOMBRE_CIUDAD"] != "Desconocido"]["NOMBRE_CIUDAD"].unique())
 
+# --- [Tus diccionarios ya están definidos correctamente] ---
+# (Mantén todo igual hasta la función `obtener_lista_ciudades`)
+
 # --- Interfaz y lógica principal ---
 st.title("📊 Histórico ENSU - Inseguridad, Hábitos, Expectativas y Efectividad de Autoridades")
-st.markdown("...")  # tu descripción
+st.markdown("""
+Explora el **histórico trimestral (2016–2025)** sobre:
+- 🏙️ Percepción de inseguridad por lugar
+- 🚶‍♀️ Cambios de hábitos por temor a la delincuencia
+- 👮‍♂️ Percepción de efectividad de autoridades
+- 🔮 Expectativas sobre la delincuencia
+- 🏛️ Efectividad del gobierno para resolver problemas
+- 🚧 Problemas que enfrenta la ciudad
+- 📢 Conocimiento de programas de prevención contra la violencia/delincuencia
+""")
 
-# --- Selección de indicador y variable ---
-tipo_variable = st.radio("Selecciona el tipo de indicador:", [...])  # tus opciones
-# ... lógica de selección (igual que antes)
+# --- Selección del tipo de indicador ---
+tipo_variable = st.radio(
+    "Selecciona el tipo de indicador:",
+    [
+        "Percepción de inseguridad",
+        "Cambio de hábitos",
+        "Efectividad de autoridades (2024–2025)",
+        "Efectividad de autoridades (2021–2023)",
+        "Expectativas sobre delincuencia",
+        "Efectividad del gobierno para resolver problemas",
+        "Problemas que enfrenta la ciudad",
+        "Conocimiento de programas de prevención contra la violencia/delincuencia"
+    ]
+)
+
+# --- Selección de variable según tipo ---
+if tipo_variable == "Percepción de inseguridad":
+    opciones = percepcion_lugares
+elif tipo_variable == "Cambio de hábitos":
+    opciones = cambios_habitos
+elif tipo_variable == "Efectividad de autoridades (2024–2025)":
+    opciones = efectividad_autoridades_2024_2025
+elif tipo_variable == "Efectividad de autoridades (2021–2023)":
+    opciones = efectividad_autoridades_2021_2023
+elif tipo_variable == "Expectativas sobre delincuencia":
+    opciones = expectativas_delincuencia
+elif tipo_variable == "Efectividad del gobierno para resolver problemas":
+    opciones = efectividad_gobierno
+elif tipo_variable == "Problemas que enfrenta la ciudad":
+    opciones = otro_problema
+else:
+    # Este caso cubre: "Conocimiento de programas..."
+    opciones = conocimiento_programas
 
 variable_sel = st.selectbox("Selecciona la variable:", list(opciones.values()))
 variable_col = [k for k, v in opciones.items() if v == variable_sel][0]
 
+# --- Obtener lista de ciudades ---
 nombres_ciudades = obtener_lista_ciudades()
 ciudad_sel = st.selectbox("Selecciona la ciudad:", ["Estados Unidos Mexicanos"] + nombres_ciudades)
 
@@ -405,6 +451,7 @@ if st.button("🔍 Cargar y mostrar resultados"):
     with st.spinner("Cargando y procesando datos históricos..."):
         todos_resumenes = []
         for periodo, file_id in archivos_drive.items():
+            # Aplicar filtro de periodo si es necesario
             if tipo_variable == "Efectividad de autoridades (2024–2025)":
                 if not any(periodo.startswith(a) for a in ["2024", "2025"]):
                     continue
@@ -423,9 +470,19 @@ if st.button("🔍 Cargar y mostrar resultados"):
                 continue
 
         if todos_resumenes:
-            resumen = pd.concat(todos_resumenes).sort_values(["ANIO", "TRIMESTRE"])
-            # ... mostrar resultados (igual que antes)
+            resumen = pd.concat(todos_resumenes, ignore_index=True).sort_values(["ANIO", "TRIMESTRE"])
+
+            # --- Mostrar resultados ---
+            titulo = f"Histórico de {ciudad_sel}" if ciudad_sel != "Estados Unidos Mexicanos" else "Histórico nacional"
+            st.subheader(f"{titulo} - {variable_sel}")
+
+            if tipo_variable == "Expectativas sobre delincuencia":
+                st.dataframe(resumen[["PERIODO", "PORCENTAJE_IGUAL", "PORCENTAJE_EMPEORARA", "PORCENTAJE_TOTAL"]])
+                st.line_chart(resumen.set_index("PERIODO")[["PORCENTAJE_IGUAL", "PORCENTAJE_EMPEORARA"]])
+            else:
+                st.dataframe(resumen[["PERIODO", "PORCENTAJE"]])
+                st.line_chart(resumen.set_index("PERIODO")["PORCENTAJE"])
         else:
-            st.warning("No hay datos válidos...")
+            st.warning(f"No hay datos válidos para '{variable_sel}' en la ciudad seleccionada.")
 
     # python -m streamlit run C:\Users\Usuario\Downloads\ensu_app\app.py
